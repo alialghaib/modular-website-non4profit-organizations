@@ -1,0 +1,190 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 33% 98%;
+    --foreground: 220 13% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 13% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 13% 20%;
+
+    --primary: 132 43% 40%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 33% 96%;
+    --secondary-foreground: 220 13% 20%;
+
+    --muted: 210 30% 92%;
+    --muted-foreground: 220 13% 40%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 132 43% 40%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 220 13% 10%;
+    --foreground: 210 33% 98%;
+
+    --card: 220 13% 12%;
+    --card-foreground: 210 33% 98%;
+
+    --popover: 220 13% 12%;
+    --popover-foreground: 210 33% 98%;
+
+    --primary: 132 43% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 13% 18%;
+    --secondary-foreground: 210 33% 98%;
+
+    --muted: 220 13% 20%;
+    --muted-foreground: 210 33% 70%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 132 43% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tight;
+  }
+
+  /* Enhanced text contrast for non-home pages */
+  .page-content h1 {
+    @apply text-gray-900 dark:text-white font-bold;
+  }
+  
+  .page-content h2, 
+  .page-content h3 {
+    @apply text-gray-800 dark:text-gray-100 font-semibold;
+  }
+  
+  .page-content p, 
+  .page-content li {
+    @apply text-gray-700 dark:text-gray-200 font-medium;
+  }
+  
+  /* Fix for circular dependency - replacing direct class override */
+  .page-content [class*="text-gray-600"] {
+    @apply text-gray-700 dark:text-gray-200;
+  }
+  
+  /* Fix for circular dependency - replacing direct class override */
+  .page-content [class*="text-gray-500"] {
+    @apply text-gray-600 dark:text-gray-300;
+  }
+
+  .glass-card {
+    @apply bg-white/50 backdrop-blur-md border border-white/20 shadow-sm;
+  }
+  
+  .glass-card-dark {
+    @apply bg-black/20 backdrop-blur-md border border-white/10 shadow-md;
+  }
+  
+  .nav-link {
+    @apply relative py-2 px-1 font-medium transition-colors duration-200 after:absolute after:left-0 after:bottom-0 after:h-0.5 after:w-0 after:bg-primary after:transition-all after:duration-300 hover:after:w-full;
+  }
+  
+  .nav-link-active {
+    @apply after:w-full;
+  }
+}
+
+/* Custom Dropdown Animation */
+.dropdown-enter {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+.dropdown-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 200ms, transform 200ms;
+}
+.dropdown-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+.dropdown-exit-active {
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 200ms, transform 200ms;
+}
+
+/* Custom Page Transitions */
+.page-transition-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.page-transition-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms, transform 300ms;
+}
+.page-transition-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+.page-transition-exit-active {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 300ms, transform 300ms;
+}
+
+/* Animation for dropdown expansion */
+.animate-slide-down {
+  animation: slideDown 0.3s ease-out forwards;
+}
+
+@keyframes slideDown {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
