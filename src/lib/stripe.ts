@@ -3,8 +3,13 @@ import { supabase } from '@/lib/supabase';
 import { User } from '@/lib/types';
 import { toast } from 'sonner';
 
+const stripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+
+if (!stripeKey) {
+  console.error("⚠️ Stripe publishable key is missing! Make sure it's set in .env");
+}
 // Initialize Stripe with your publishable key
-export const stripePromise = loadStripe('pk_test_51R45dIERyjuxcD4YSPipiBqPkKMavITtmkRD6i1gDdHQhBB8EMre4mrxqEeIUEQfrNJJuNU07wQ6sWmRysxypX0V00TGbwcdZG');
+export const stripePromise = loadStripe(stripeKey);
 
 // Function to handle checkout session creation via Supabase Edge Function
 export const createCheckoutSession = async (
