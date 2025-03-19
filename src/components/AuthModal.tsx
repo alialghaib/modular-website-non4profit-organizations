@@ -12,7 +12,7 @@ interface AuthModalProps {
 }
 
 const AuthModal = ({ isOpen, onClose, mode }: AuthModalProps) => {
-  const { login, signup, isLoading } = useAuth();
+  const { login, signup, isLoading, user } = useAuth();
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
@@ -28,7 +28,6 @@ const AuthModal = ({ isOpen, onClose, mode }: AuthModalProps) => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   
   useEffect(() => {
-    // Reset form when modal opens
     if (isOpen) {
       setFormData({
         username: '',
@@ -47,7 +46,6 @@ const AuthModal = ({ isOpen, onClose, mode }: AuthModalProps) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
     
-    // Clear error for this field if it exists
     if (errors[name]) {
       setErrors({ ...errors, [name]: '' });
     }
@@ -84,6 +82,18 @@ const AuthModal = ({ isOpen, onClose, mode }: AuthModalProps) => {
     return Object.keys(newErrors).length === 0;
   };
   
+  const redirectToDashboard = (role: string) => {
+    console.log("Redirecting based on role:", role);
+    
+    if (role === 'admin') {
+      navigate('/admin/dashboard');
+    } else if (role === 'guide') {
+      navigate('/guide/dashboard');
+    } else {
+      navigate('/hiker/dashboard');
+    }
+  };
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -93,31 +103,18 @@ const AuthModal = ({ isOpen, onClose, mode }: AuthModalProps) => {
       if (mode === 'login') {
         await login(formData.email, formData.password);
         
-        // Redirect based on role
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-          const user = JSON.parse(storedUser);
-          if (user.role === 'admin') {
-            navigate('/admin/dashboard');
-          } else if (user.role === 'guide') {
-            navigate('/guide/dashboard');
-          } else {
-            navigate('/hiker/dashboard');
-          }
-        } else {
-          navigate('/');
-        }
+        // Use the role from the logged-in user
+        const userRole = user?.role || 
+                         (formData.email === 'admin@example.com' ? 'admin' : 
+                          formData.email === 'guide@example.com' ? 'guide' : 'hiker');
+        
+        console.log("Login complete, redirecting based on role:", userRole);
+        redirectToDashboard(userRole);
       } else {
         await signup(formData);
         
-        // Redirect based on role
-        if (formData.role === 'admin') {
-          navigate('/admin/dashboard');
-        } else if (formData.role === 'guide') {
-          navigate('/guide/dashboard');
-        } else {
-          navigate('/hiker/dashboard');
-        }
+        console.log("Signup complete, redirecting based on role:", formData.role);
+        redirectToDashboard(formData.role);
       }
       onClose();
     } catch (error) {
@@ -146,7 +143,6 @@ const AuthModal = ({ isOpen, onClose, mode }: AuthModalProps) => {
         <form onSubmit={handleSubmit} className="p-6">
           <div className="space-y-4">
             {mode === 'login' ? (
-              // Login form fields
               <>
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -167,7 +163,6 @@ const AuthModal = ({ isOpen, onClose, mode }: AuthModalProps) => {
                 </div>
               </>
             ) : (
-              // Signup form fields
               <>
                 <div>
                   <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

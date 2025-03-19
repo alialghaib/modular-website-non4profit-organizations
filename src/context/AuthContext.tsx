@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '@/lib/types';
 import { signIn, signUp, signOut, getSession } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface AuthContextType {
@@ -24,13 +25,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const checkSession = async () => {
       setIsLoading(true);
-      const { data, error } = await getSession();
-      
-      if (!error && data?.session?.user) {
-        setUser(data.session.user as User);
+      try {
+        const { data, error } = await getSession();
+        
+        if (!error && data?.session?.user) {
+          // The user from getSession should already be in the correct format
+          // but we need to ensure it matches our User type
+          const sessionUser = data.session.user as unknown as User;
+          setUser(sessionUser);
+          
+          // Update user metadata with role if it's not already there
+          if (sessionUser.role) {
+            const { error: updateError } = await supabase.auth.updateUser({
+              data: { role: sessionUser.role }
+            });
+            
+            if (!updateError) {
+              console.log("Updated auth metadata with role:", sessionUser.role);
+            }
+          }
+          
+          console.log("Auth session loaded, user role:", sessionUser.role);
+        }
+      } catch (error) {
+        console.error('Session check error:', error);
+        // Don't show a toast here as it's not a user-initiated action
+      } finally {
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
     };
     
     checkSession();
@@ -46,7 +68,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error(error || 'Login failed');
       }
       
-      setUser(authUser);
+      console.log("Raw auth user data:", authUser);
+      
+      // Update user metadata with role
+      if (authUser.role) {
+        const { error: updateError } = await supabase.auth.updateUser({
+          data: { role: authUser.role }
+        });
+        
+        if (!updateError) {
+          console.log("Updated auth metadata with role:", authUser.role);
+        }
+      }
+      
+      // authUser should be in the correct format, but let's ensure type compatibility
+      setUser(authUser as unknown as User);
+      console.log("Login successful, user role:", authUser.role);
       toast.success('Logged in successfully');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Login failed';
@@ -73,7 +110,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error(error || 'Signup failed');
       }
       
-      setUser(newUser);
+      console.log("Raw signup user data:", newUser);
+      
+      // Ensure the newUser is in the correct format for our User type
+      setUser(newUser as unknown as User);
+      console.log("Signup successful, user role:", newUser.role);
       toast.success('Account created successfully');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Signup failed';
@@ -102,6 +143,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Check if user has required role
   const checkRole = (roles: Array<'admin' | 'guide' | 'hiker'>) => {
     if (!user) return false;
+    console.log("Checking role:", user.role, "against allowed roles:", roles);
     return roles.includes(user.role);
   };
 

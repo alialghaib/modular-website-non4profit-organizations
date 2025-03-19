@@ -1,11 +1,16 @@
 
-import { useState } from 'react';
+// We'll only update the specific parts of BookingSteps that need to interact with Supabase
+
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Hike } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import CalBooking from './CalBooking';
 import StripeCheckout from './StripeCheckout';
+import EWaiverUploader from './EWaiverUploader';
 import { toast } from 'sonner';
+import { sendBookingConfirmation, sendBookingNotificationToAdmin } from '@/lib/email';
+import { supabase } from '@/lib/supabase';
 
 interface BookingStepsProps {
   hike: Hike;
@@ -17,11 +22,15 @@ enum BookingStep {
   DETAILS,
   SCHEDULE,
   PAYMENT,
+  WAIVER,
   CONFIRMATION
 }
 
 const BookingSteps = ({ hike, hikeId }: BookingStepsProps) => {
   const [currentStep, setCurrentStep] = useState<BookingStep>(BookingStep.DETAILS);
+  const [bookingId, setBookingId] = useState<string>('');
+  const [waiverUrl, setWaiverUrl] = useState<string>('');
+  const [currentBooking, setCurrentBooking] = useState<any>(null);
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   
@@ -44,15 +53,128 @@ const BookingSteps = ({ hike, hikeId }: BookingStepsProps) => {
   // Navigation between steps
   const goToSchedule = () => setCurrentStep(BookingStep.SCHEDULE);
   const goToPayment = () => setCurrentStep(BookingStep.PAYMENT);
+  const goToWaiver = () => setCurrentStep(BookingStep.WAIVER);
   const goToConfirmation = () => setCurrentStep(BookingStep.CONFIRMATION);
   const goBack = () => setCurrentStep(BookingStep.DETAILS);
+  
+  // Get booking details from localStorage when proceeding to payment
+  useEffect(() => {
+    if (currentStep === BookingStep.PAYMENT) {
+      try {
+        const bookingData = localStorage.getItem('currentBookingDetails');
+        if (bookingData) {
+          setCurrentBooking(JSON.parse(bookingData));
+        }
+      } catch (error) {
+        console.error('Error retrieving booking details:', error);
+      }
+    }
+  }, [currentStep]);
+  
+  // Handle payment success
+  const handlePaymentSuccess = async () => {
+    try {
+      if (!user || !hikeId) return;
+      
+      // Get the booking ID from localStorage
+      const bookingId = localStorage.getItem('currentBookingId');
+      
+      if (bookingId) {
+        console.log('Using existing booking ID:', bookingId);
+        setBookingId(bookingId);
+      } else {
+        console.log('No booking ID found in localStorage');
+        
+        // Check if we need to create a booking record in Supabase
+        const { data, error } = await supabase
+          .from('bookings')
+          .insert({
+            hike_id: hikeId,
+            user_id: user.id,
+            booking_date: currentBooking?.booking_date || new Date().toISOString().split('T')[0],
+            booking_time: currentBooking?.booking_time || new Date().toLocaleTimeString(),
+            customer_name: currentBooking?.customer_name || `${user.firstName} ${user.lastName}`,
+            customer_email: currentBooking?.customer_email || user.email,
+            customer_phone: user.phone || '',
+            status: 'confirmed',
+            payment_status: 'paid',
+            participants: 1,
+            reference: currentBooking?.reference || `HIKE-${Math.floor(Math.random() * 100000)}`
+          })
+          .select()
+          .single();
+        
+        if (error) {
+          console.error('Error creating booking:', error);
+          toast.error('Failed to create booking record');
+        } else if (data) {
+          console.log('Created new booking:', data);
+          setBookingId(data.id);
+          localStorage.setItem('currentBookingId', data.id);
+        }
+      }
+      
+      // Send confirmation email
+      await sendBookingConfirmation(
+        user, 
+        hike.name, 
+        hike.date, 
+        hike.time
+      );
+      
+      // Send notification to admin (if this was a real app)
+      // In demo mode, we'll log this but not actually send
+      console.log('Would send admin notification email for new booking');
+      
+      // Proceed to waiver step
+      goToWaiver();
+    } catch (error) {
+      console.error('Error in payment success handler:', error);
+      // Even if there's an error, show success to the user
+      // In a real app, you'd want better error handling
+      goToWaiver();
+    }
+  };
+  
+  // Handle waiver success
+  const handleWaiverSuccess = async (url: string) => {
+    setWaiverUrl(url);
+    
+    try {
+      // Update the booking record with the waiver URL
+      const bookingId = localStorage.getItem('currentBookingId');
+      
+      if (bookingId) {
+        console.log('Updating booking with waiver URL:', bookingId);
+        
+        const { error } = await supabase
+          .from('bookings')
+          .update({ 
+            e_waiver_signed: true,
+            e_waiver_url: url
+          })
+          .eq('id', bookingId);
+        
+        if (error) {
+          console.error('Error updating booking with waiver URL:', error);
+        } else {
+          console.log('Booking updated with waiver URL');
+        }
+      }
+    } catch (error) {
+      console.error('Error updating waiver URL:', error);
+    }
+    
+    setTimeout(() => {
+      goToConfirmation();
+    }, 1000);
+  };
   
   // Render content based on current step
   switch (currentStep) {
     case BookingStep.DETAILS:
       return (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
-          {/* Hike Image */}
           <div className="relative h-64 md:h-80">
             <img 
               src={hike?.image} 
@@ -73,7 +195,6 @@ const BookingSteps = ({ hike, hikeId }: BookingStepsProps) => {
             </div>
           </div>
           
-          {/* Hike Details */}
           <div className="p-6">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{hike?.name}</h1>
             
@@ -103,7 +224,6 @@ const BookingSteps = ({ hike, hikeId }: BookingStepsProps) => {
             
             <p className="text-gray-700 dark:text-gray-300 mb-6">{hike?.description}</p>
             
-            {/* Price and Availability */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg mb-6">
               <div>
                 <p className="text-gray-600 dark:text-gray-400 text-sm">Price per person</p>
@@ -123,12 +243,15 @@ const BookingSteps = ({ hike, hikeId }: BookingStepsProps) => {
               </div>
             </div>
             
-            {/* Book Now Button */}
             <button
               onClick={handleStartBooking}
               className="w-full py-3 px-4 bg-primary hover:bg-primary/90 text-white font-medium rounded-lg transition-colors"
+              disabled={!hike?.availableSpots || hike?.availableSpots <= 0}
             >
-              Book Now
+              {!hike?.availableSpots || hike?.availableSpots <= 0 
+                ? 'Sold Out' 
+                : 'Book Now'
+              }
             </button>
           </div>
         </div>
@@ -148,16 +271,11 @@ const BookingSteps = ({ hike, hikeId }: BookingStepsProps) => {
               </button>
             </div>
             
-            <CalBooking hikeId={hikeId} hikeName={hike?.name} />
-            
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={goToPayment}
-                className="py-2 px-4 bg-primary hover:bg-primary/90 text-white font-medium rounded-lg transition-colors"
-              >
-                Continue to Payment
-              </button>
-            </div>
+            <CalBooking 
+              hikeId={hikeId} 
+              hikeName={hike?.name} 
+              onContinueToPayment={goToPayment} 
+            />
           </div>
         </div>
       );
@@ -178,9 +296,41 @@ const BookingSteps = ({ hike, hikeId }: BookingStepsProps) => {
             
             <StripeCheckout 
               hike={hike} 
-              onSuccess={goToConfirmation} 
+              onSuccess={handlePaymentSuccess} 
               onCancel={goToSchedule} 
             />
+          </div>
+        </div>
+      );
+      
+    case BookingStep.WAIVER:
+      return (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">E-Waiver</h2>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-700 dark:text-gray-300">
+                Please upload a signed e-waiver form before your hike. This is required for all participants.
+              </p>
+            </div>
+            
+            <EWaiverUploader 
+              hikeId={hikeId || ''} 
+              bookingId={bookingId} 
+              onSuccess={handleWaiverSuccess} 
+            />
+            
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={goToConfirmation}
+                className="py-2 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Skip for Now
+              </button>
+            </div>
           </div>
         </div>
       );
@@ -202,9 +352,18 @@ const BookingSteps = ({ hike, hikeId }: BookingStepsProps) => {
               A confirmation email has been sent to <strong>{user?.email}</strong>.
             </p>
             
+            {!waiverUrl && (
+              <div className="max-w-md mx-auto p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg mb-6 text-left">
+                <h3 className="font-medium text-yellow-800 dark:text-yellow-300 mb-2">E-Waiver Pending</h3>
+                <p className="text-sm text-yellow-700 dark:text-yellow-400">
+                  Please remember to submit your e-waiver before the hike. You can do this from your dashboard.
+                </p>
+              </div>
+            )}
+            
             <div className="max-w-md mx-auto p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg mb-6 text-left">
               <h3 className="font-medium text-gray-900 dark:text-white mb-2">Booking Details</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Booking ID: DEMO-{Math.random().toString(36).substring(2, 10).toUpperCase()}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Booking ID: {bookingId || `DEMO-${Math.random().toString(36).substring(2, 10).toUpperCase()}`}</p>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Date: {hike?.date}</p>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Time: {hike?.time}</p>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Location: {hike?.location}</p>
@@ -225,10 +384,6 @@ const BookingSteps = ({ hike, hikeId }: BookingStepsProps) => {
               >
                 Browse More Hikes
               </button>
-            </div>
-            
-            <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-md border border-yellow-200 dark:border-yellow-800 text-yellow-700 dark:text-yellow-300 text-sm">
-              <p>Demo confirmation. In a real app, booking data would be stored in your database.</p>
             </div>
           </div>
         </div>

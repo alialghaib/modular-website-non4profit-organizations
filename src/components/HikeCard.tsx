@@ -98,7 +98,7 @@ const HikeCard = ({ hike, variant = 'default' }: HikeCardProps) => {
         </div>
         
         <Link 
-          to={`/hikes/${id}`}
+          to={`/hike/${id}`}
           className="mt-4 inline-flex items-center text-sm font-medium text-primary hover:text-primary/80 transition-colors"
         >
           View Details

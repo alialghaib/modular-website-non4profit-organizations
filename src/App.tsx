@@ -20,6 +20,7 @@ import About from "./pages/About";
 import Donate from "./pages/Donate";
 import JoinUs from "./pages/JoinUs";
 import Profile from "./pages/Profile";
+import MyHikes from "./pages/hiker/MyHikes";
 
 // Role-based dashboard pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -71,6 +72,7 @@ const App = () => (
               {/* Hiker-only routes */}
               <Route element={<ProtectedRoute allowedRoles={['hiker']} />}>
                 <Route path="/hiker/dashboard" element={<HikerDashboard />} />
+                <Route path="/hiker/my-hikes" element={<MyHikes />} />
                 <Route path="/hiker/bookings" element={<NotFound />} />
                 <Route path="/hiker/booking/:bookingId" element={<NotFound />} />
                 <Route path="/hiker/booking/:bookingId/waiver" element={<NotFound />} />

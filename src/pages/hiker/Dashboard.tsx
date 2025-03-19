@@ -1,36 +1,54 @@
 
-import { useEffect } from 'react';
-import { Helmet } from 'react-helmet';
-import { useAuth } from '@/context/AuthContext';
-import Navigation from '@/components/Navigation';
-import Footer from '@/components/Footer';
-import { Link } from 'react-router-dom';
-import { Calendar, Map, CreditCard, FileText } from 'lucide-react';
+import { useState } from "react";
+import { Helmet } from "react-helmet";
+import Navigation from "@/components/Navigation";
+import Footer from "@/components/Footer";
+import { useAuth } from "@/context/AuthContext";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import UserBookings from "@/components/UserBookings";
+import HikeCard from "@/components/HikeCard";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 
 const HikerDashboard = () => {
   const { user } = useAuth();
-  
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
+  const [activeTab, setActiveTab] = useState("hikes");
+  const navigate = useNavigate();
 
-  // Mock upcoming bookings for the hiker
-  const upcomingBookings = [
-    {
-      id: '1',
-      hikeName: 'Mt. Stephen Fossil Beds Tour',
-      date: 'June 15, 2023',
-      time: '9:00 AM',
-      participants: 2,
-      status: 'confirmed',
-      eWaiverStatus: 'pending'
+  // Fetch upcoming hikes
+  const { data: upcomingHikes, isLoading } = useQuery({
+    queryKey: ["upcomingHikes"],
+    queryFn: async () => {
+      // Get today's date at the beginning of the day
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayIso = today.toISOString().split('T')[0];
+      
+      console.log('Fetching upcoming hikes with date >= ' + todayIso);
+      
+      const { data, error } = await supabase
+        .from('hikes')
+        .select('*')
+        .gte('date', todayIso) // Use greater than or equal to include today's hikes
+        .order('date', { ascending: true })
+        .limit(3);
+      
+      if (error) {
+        console.error('Error fetching upcoming hikes:', error);
+        throw error;
+      }
+      
+      console.log('Fetched upcoming hikes:', data);
+      return data || [];
     }
-  ];
+  });
 
   return (
     <>
       <Helmet>
-        <title>My Dashboard | Nature Hikes</title>
+        <title>Hiker Dashboard | Community Trail Guide</title>
       </Helmet>
       
       <div className="min-h-screen flex flex-col">
@@ -42,178 +60,171 @@ const HikerDashboard = () => {
               <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                    My Dashboard
+                    Welcome, {user?.firstName}!
                   </h1>
-                  <p className="mt-2 text-gray-600 dark:text-gray-400">
-                    Welcome back, {user?.firstName}! Manage your hiking adventures.
+                  <p className="text-gray-600 dark:text-gray-400 mt-2">
+                    View your completed hikes and manage your profile information.
                   </p>
                 </div>
+                
                 <div className="mt-4 md:mt-0">
-                  <Link
-                    to="/hikes"
+                  <button 
+                    onClick={() => navigate('/hikes')}
                     className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                   >
-                    <Map className="h-4 w-4 mr-2" />
-                    Browse Hikes
-                  </Link>
+                    <svg className="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Book a New Hike
+                  </button>
+                </div>
+              </div>
+
+              {/* Upcoming Hikes Section */}
+              <div className="mb-8 bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Upcoming Adventures</h2>
+                </div>
+                
+                <div className="p-6">
+                  {isLoading ? (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500 dark:text-gray-400">Loading upcoming hikes...</p>
+                    </div>
+                  ) : upcomingHikes && upcomingHikes.length > 0 ? (
+                    <div className="grid gap-6 md:grid-cols-3">
+                      {upcomingHikes.map((hike) => (
+                        <HikeCard key={hike.id} hike={hike} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500 dark:text-gray-400 mb-4">No upcoming hikes scheduled</p>
+                      <Button onClick={() => navigate('/hikes')}>
+                        Browse Available Hikes
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                {/* Quick Link 1 */}
-                <Link to="/hiker/bookings" className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-                  <div className="p-6">
-                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-4">
-                      <Calendar className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">My Bookings</h3>
-                    <p className="text-gray-600 dark:text-gray-400">Manage your upcoming hikes</p>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                  <div className="px-6 pt-6">
+                    <TabsList className="grid w-full grid-cols-3">
+                      <TabsTrigger value="hikes">Completed Hikes</TabsTrigger>
+                      <TabsTrigger value="waivers">E-Waivers</TabsTrigger>
+                      <TabsTrigger value="payments">Payments</TabsTrigger>
+                    </TabsList>
                   </div>
-                </Link>
-                
-                {/* Quick Link 2 */}
-                <Link to="/hiker/waivers" className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+                  
                   <div className="p-6">
-                    <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center mb-4">
-                      <FileText className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">E-Waivers</h3>
-                    <p className="text-gray-600 dark:text-gray-400">View and sign required waivers</p>
-                  </div>
-                </Link>
-                
-                {/* Quick Link 3 */}
-                <Link to="/hiker/payments" className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-                  <div className="p-6">
-                    <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4">
-                      <CreditCard className="h-6 w-6 text-green-600 dark:text-green-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Payment History</h3>
-                    <p className="text-gray-600 dark:text-gray-400">View your payment records</p>
-                  </div>
-                </Link>
-                
-                {/* Quick Link 4 */}
-                <Link to="/profile" className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-                  <div className="p-6">
-                    <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mb-4">
-                      <div className="h-6 w-6 flex items-center justify-center rounded-full bg-purple-600 dark:bg-purple-400 text-white font-medium text-sm">
-                        {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
+                    <TabsContent value="hikes">
+                      <UserBookings />
+                    </TabsContent>
+                    
+                    <TabsContent value="waivers">
+                      <div className="space-y-6">
+                        <h2 className="text-2xl font-bold">E-Waivers</h2>
+                        
+                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                          <p className="text-blue-800 dark:text-blue-300">
+                            All participants must complete an e-waiver before participating in a hike. 
+                            You can upload your signed waiver when booking a new hike.
+                          </p>
+                        </div>
+                        
+                        <div className="text-center py-10">
+                          <p className="text-gray-500 dark:text-gray-400">No active waivers found.</p>
+                          <button 
+                            onClick={() => navigate('/hikes')}
+                            className="mt-4 px-4 py-2 bg-primary text-white rounded-md"
+                          >
+                            Book a New Hike
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">My Profile</h3>
-                    <p className="text-gray-600 dark:text-gray-400">Update your personal details</p>
+                    </TabsContent>
+                    
+                    <TabsContent value="payments">
+                      <div className="space-y-6">
+                        <h2 className="text-2xl font-bold">Payment History</h2>
+                        
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead className="bg-gray-50 dark:bg-gray-800">
+                              <tr>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                  Date
+                                </th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                  Hike
+                                </th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                  Amount
+                                </th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                  Status
+                                </th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                  Receipt
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                              {/* Demo payment history */}
+                              <tr>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                  {new Date().toLocaleDateString()}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                  Morning Trail Hike
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                  $75.00
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400">
+                                    Paid
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                  <a href="#" className="text-primary hover:underline">View</a>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                  {new Date(Date.now() - 7 * 86400000).toLocaleDateString()}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                  Mountain Summit Adventure
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                  $125.00
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400">
+                                    Paid
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                  <a href="#" className="text-primary hover:underline">View</a>
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                        
+                        <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-md border border-yellow-200 dark:border-yellow-800">
+                          <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-2">Demo Mode</h3>
+                          <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                            This payment history is simulated. In a production environment, actual payment records from Stripe would be displayed.
+                          </p>
+                        </div>
+                      </div>
+                    </TabsContent>
                   </div>
-                </Link>
-              </div>
-              
-              <div className="mb-8">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Upcoming Bookings</h2>
-                {upcomingBookings.length > 0 ? (
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead className="bg-gray-50 dark:bg-gray-900/30">
-                          <tr>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Hike</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date & Time</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Participants</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">E-Waiver</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                          {upcomingBookings.map((booking) => (
-                            <tr key={booking.id} className="hover:bg-gray-50 dark:hover:bg-gray-750">
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm font-medium text-gray-900 dark:text-white">{booking.hikeName}</div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm text-gray-900 dark:text-white">{booking.date}</div>
-                                <div className="text-sm text-gray-500 dark:text-gray-400">{booking.time}</div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm text-gray-900 dark:text-white">{booking.participants}</div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                                  {booking.status}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
-                                  {booking.eWaiverStatus}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <Link to={`/hiker/booking/${booking.id}`} className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-4">View Details</Link>
-                                {booking.eWaiverStatus === 'pending' && (
-                                  <Link to={`/hiker/booking/${booking.id}/waiver`} className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300">Sign Waiver</Link>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 text-center">
-                    <p className="text-gray-600 dark:text-gray-400 mb-4">You don't have any upcoming bookings.</p>
-                    <Link
-                      to="/hikes"
-                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-                    >
-                      Browse Available Hikes
-                    </Link>
-                  </div>
-                )}
-              </div>
-              
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Recommended Hikes</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="rounded-lg overflow-hidden shadow-sm border border-gray-200 dark:border-gray-700">
-                    <img src="/placeholder.svg" alt="Walcott Quarry" className="w-full h-40 object-cover" />
-                    <div className="p-4">
-                      <h3 className="font-medium text-gray-900 dark:text-white mb-1">Walcott Quarry</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Experience the famous fossil beds of the Burgess Shale</p>
-                      <Link
-                        to="/hikes/walcott-quarry"
-                        className="text-sm font-medium text-primary hover:text-primary/80"
-                      >
-                        Learn more
-                      </Link>
-                    </div>
-                  </div>
-                  <div className="rounded-lg overflow-hidden shadow-sm border border-gray-200 dark:border-gray-700">
-                    <img src="/placeholder.svg" alt="Stanley Glacier" className="w-full h-40 object-cover" />
-                    <div className="p-4">
-                      <h3 className="font-medium text-gray-900 dark:text-white mb-1">Stanley Glacier</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Beautiful glacier views and unique fossil discoveries</p>
-                      <Link
-                        to="/hikes/stanley-glacier"
-                        className="text-sm font-medium text-primary hover:text-primary/80"
-                      >
-                        Learn more
-                      </Link>
-                    </div>
-                  </div>
-                  <div className="rounded-lg overflow-hidden shadow-sm border border-gray-200 dark:border-gray-700">
-                    <img src="/placeholder.svg" alt="Mt. Stephen" className="w-full h-40 object-cover" />
-                    <div className="p-4">
-                      <h3 className="font-medium text-gray-900 dark:text-white mb-1">Mt. Stephen Fossil Beds</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Challenging hike with breathtaking trilobite fossils</p>
-                      <Link
-                        to="/hikes/mt-stephen"
-                        className="text-sm font-medium text-primary hover:text-primary/80"
-                      >
-                        Learn more
-                      </Link>
-                    </div>
-                  </div>
-                </div>
+                </Tabs>
               </div>
             </div>
           </div>
