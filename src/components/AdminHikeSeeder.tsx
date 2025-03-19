@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { DEMO_HIKES, DEMO_BOOKINGS } from '@/lib/demoData';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from "@/lib/supabase";
 import { toast } from 'sonner';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/context/AuthContext';

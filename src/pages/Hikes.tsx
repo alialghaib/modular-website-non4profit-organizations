@@ -6,7 +6,7 @@ import Footer from "@/components/Footer";
 import HikeCard from "@/components/HikeCard";
 import { DEMO_HIKES } from "@/lib/demoData";
 import { Hike } from "@/lib/types";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 

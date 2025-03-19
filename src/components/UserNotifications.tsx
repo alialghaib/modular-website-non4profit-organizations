@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Bell, CheckCircle } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from "@/lib/supabase";
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';

@@ -7,7 +7,7 @@ import Footer from '@/components/Footer';
 import BookingSteps from '@/components/BookingSteps';
 import { DEMO_HIKES } from '@/lib/demoData';
 import { Hike } from '@/lib/types';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from "@/lib/supabase";
 import { toast } from 'sonner';
 
 const HikeDetail = () => {

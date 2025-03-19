@@ -97,13 +97,6 @@ const HikeCard = ({ hike, variant = 'default' }: HikeCardProps) => {
           )}
         </div>
         
-        <Link 
-          to={`/hike/${id}`}
-          className="mt-4 inline-flex items-center text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-        >
-          View Details
-          <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
-        </Link>
       </div>
     </div>
   );

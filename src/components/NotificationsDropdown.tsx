@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from "@/lib/supabase";
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
