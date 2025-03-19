@@ -9,11 +9,11 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import { Elements } from "@stripe/react-stripe-js";
 import { stripePromise } from "@/lib/stripe";
 
+
+
 // Pages
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-import Login from "./pages/Login";
-import SignUp from "./pages/SignUp";
 import Hikes from "./pages/Hikes";
 import HikeDetail from "./pages/HikeDetail";
 import About from "./pages/About";
@@ -40,8 +40,7 @@ const App = () => (
             <Routes>
               {/* Public routes */}
               <Route path="/" element={<Index />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<SignUp />} />
+              <Route path="*" element={<NotFound />} />
               <Route path="/hikes" element={<Hikes />} />
               <Route path="/hike/:hikeId" element={<HikeDetail />} />
               <Route path="/about" element={<About />} />

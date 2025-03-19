@@ -9,6 +9,8 @@ import { format } from 'date-fns';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { getTimeSlotsBasedOnDuration } from '@/lib/timeSlots';
+
 
 interface CalBookingProps {
   hikeId?: string;
@@ -152,6 +154,8 @@ const CalBooking = ({ hikeId, hikeName, onContinueToPayment }: CalBookingProps) 
         
         // Determine available time slots based on hike duration
         const hikeTimeSlots = getTimeSlotsBasedOnDuration(hikeDuration);
+        console.log('Time slots for this hike duration:', hikeTimeSlots);
+
         
         // Find dates where all time slots are at max capacity
         const fullyBookedDates = Object.entries(bookingsBySlot)

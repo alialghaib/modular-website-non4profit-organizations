@@ -5,6 +5,8 @@ import { useAuth } from '@/context/AuthContext';
 import { NavItem } from '@/lib/types';
 import { ChevronDown, Menu, X } from 'lucide-react';
 import UserDropdown from './UserDropdown';
+import AuthModal from "@/components/AuthModal";
+
 
 const NAVIGATION_ITEMS: NavItem[] = [
   { title: 'Home', href: '/' },
@@ -34,6 +36,8 @@ const Navigation = () => {
   const location = useLocation();
   const { isAuthenticated } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
@@ -63,6 +67,7 @@ const Navigation = () => {
         : 'bg-transparent py-5'
       }`}
     >
+    <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} mode={authMode} />
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center">
           {/* Logo */}
@@ -131,18 +136,9 @@ const Navigation = () => {
               <UserDropdown />
             ) : (
               <div className="hidden md:flex items-center space-x-3">
-                <Link 
-                  to="/login" 
-                  className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-200 dark:hover:text-white transition-colors"
-                >
-                  Login
-                </Link>
-                <Link 
-                  to="/signup" 
-                  className="px-4 py-1.5 text-sm font-medium rounded-full bg-primary hover:bg-primary/90 text-white transition-all duration-200 shadow-sm hover:shadow"
-                >
-                  Sign up
-                </Link>
+                <button onClick={() => { setAuthMode('login'); setAuthModalOpen(true); }}>Login</button>
+                <button onClick={() => { setAuthMode('signup'); setAuthModalOpen(true); }}>Sign Up</button>
+
               </div>
             )}
 

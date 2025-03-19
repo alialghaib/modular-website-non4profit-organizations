@@ -291,7 +291,6 @@ const AuthModal = ({ isOpen, onClose, mode }: AuthModalProps) => {
               )}
             </div>
           </div>
-          
           <button
             type="submit"
             disabled={isLoading}

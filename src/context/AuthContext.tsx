@@ -62,28 +62,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      const { user: authUser, error } = await signIn(email, password);
-      
-      if (error || !authUser) {
-        throw new Error(error || 'Login failed');
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+  
+      if (error || !data?.user) {
+        throw new Error(error?.message || 'Login failed');
       }
+  
+      console.log("Raw auth user data:", data.user);
       
-      console.log("Raw auth user data:", authUser);
-      
+    // Use the role from user_metadata
+    let userRole = data.user.user_metadata?.role;
+      if (!userRole || userRole === 'authenticated') {
+        console.warn("User role is not set correctly, defaulting to hiker");
+        userRole = 'hiker';
+      }
       // Update user metadata with role
-      if (authUser.role) {
+      if (data.user.user_metadata?.role) {
         const { error: updateError } = await supabase.auth.updateUser({
-          data: { role: authUser.role }
+          data: { role: userRole },
         });
-        
+  
         if (!updateError) {
-          console.log("Updated auth metadata with role:", authUser.role);
+          console.log("Updated auth metadata with role:", userRole);
         }
       }
       
-      // authUser should be in the correct format, but let's ensure type compatibility
-      setUser(authUser as unknown as User);
-      console.log("Login successful, user role:", authUser.role);
+      // Manually update the local user state with the correct role
+      const updatedUser = {
+        ...data.user,
+        user_metadata: {
+        ...data.user.user_metadata,
+        role: userRole,
+        },
+      };
+      // Ensure type compatibility before setting the user
+      setUser(updatedUser as unknown as User);
+      console.log("Login successful, user role:", data.user.user_metadata?.role);
       toast.success('Logged in successfully');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Login failed';
@@ -93,6 +110,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
     }
   };
+  
 
   // Handle user signup
   const signup = async (userData: Partial<User> & { password: string, role: 'admin' | 'guide' | 'hiker' }) => {
@@ -112,9 +130,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       console.log("Raw signup user data:", newUser);
       
+      // Update the user's metadata with the selected role
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: { role: userData.role }
+      });
+
+      if (updateError) {
+        console.error("Error updating role:", updateError);
+        // Optionally, you could throw an error here or choose to continue
+      } else {
+        console.log("Signup successful, user role updated to:", userData.role);
+      }
+
+      // Manually update the local user state with the correct role
+      const updatedUser = {
+        ...newUser,
+        user_metadata: {
+        ...newUser.user_metadata,
+        role: userData.role,
+      },
+    };
       // Ensure the newUser is in the correct format for our User type
-      setUser(newUser as unknown as User);
-      console.log("Signup successful, user role:", newUser.role);
+      setUser(updatedUser as unknown as User);
+      console.log("Signup successful, user role:", updatedUser.user_metadata?.role);
       toast.success('Account created successfully');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Signup failed';

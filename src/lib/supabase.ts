@@ -336,3 +336,6 @@ export const getSession = async () => {
     return { data: { session: null }, error: 'Failed to get session' };
   }
 };
+
+// Expose Supabase to the window object for debugging
+(window as any).supabase = supabase;
