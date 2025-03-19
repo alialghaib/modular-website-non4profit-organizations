@@ -2,10 +2,12 @@
 import { createClient } from '@supabase/supabase-js';
 import { User } from '@/lib/types';
 
-// Initialize Supabase client with actual credentials
-const supabaseUrl = 'https://zqfxzllbkgboqdkqokxl.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxZnh6bGxia2dib3Fka3Fva3hsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIzMDg4MTAsImV4cCI6MjA1Nzg4NDgxMH0.fxyCDkrMn73nm8aJys0BJpUAgNXKLDY0jsVKoMxertE';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error("⚠️ Supabase URL or Anon Key is missing! Check your .env file.");
+}
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // User registration function
