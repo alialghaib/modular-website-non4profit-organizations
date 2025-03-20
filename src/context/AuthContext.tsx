@@ -4,6 +4,7 @@ import { User } from '@/lib/types';
 import { signIn, signUp, signOut, getSession } from '@/lib/supabase';
 import { supabase } from "@/lib/supabase";
 import { toast } from 'sonner';
+import { useNavigate } from "react-router-dom";
 
 interface AuthContextType {
   user: User | null;
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate(); // Add this
 
   // Check for existing session on mount
   useEffect(() => {
@@ -33,28 +35,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // but we need to ensure it matches our User type
           const sessionUser = data.session.user as unknown as User;
           setUser(sessionUser);
-          
-          // Update user metadata with role if it's not already there
-          if (sessionUser.role) {
-            const { error: updateError } = await supabase.auth.updateUser({
-              data: { role: sessionUser.role }
-            });
-            
-            if (!updateError) {
-              console.log("Updated auth metadata with role:", sessionUser.role);
-            }
-          }
-          
-          console.log("Auth session loaded, user role:", sessionUser.role);
+  
+          // Fetch user role from Supabase roles table
+          const { data: roleData } = await supabase
+            .from("roles")
+            .select("role")
+            .eq("user_id", sessionUser.id)
+            .single();
+  
+          // Set the user's role from the database (default to "hiker" if missing)
+          setUser(prevUser => prevUser ? { ...prevUser, role: roleData?.role || "hiker" } : prevUser);
+  
+          console.log("Auth session loaded, user role:", roleData?.role || "hiker");
         }
       } catch (error) {
         console.error('Session check error:', error);
-        // Don't show a toast here as it's not a user-initiated action
       } finally {
         setIsLoading(false);
       }
     };
-    
+  
     checkSession();
   }, []);
 
@@ -169,15 +169,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(true);
       await signOut();
       setUser(null);
-      toast.success('Logged out successfully');
+      toast.success("Logged out successfully");
+      navigate("/"); // Redirect to main page after logout
     } catch (error) {
-      console.error('Logout error:', error);
-      toast.error('Logout failed');
+      console.error("Logout error:", error);
+      toast.error("Logout failed");
     } finally {
       setIsLoading(false);
     }
   };
-
   // Check if user has required role
   const checkRole = (roles: Array<'admin' | 'guide' | 'hiker'>) => {
     if (!user) return false;

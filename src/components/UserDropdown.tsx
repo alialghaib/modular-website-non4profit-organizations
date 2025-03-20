@@ -1,6 +1,5 @@
-
 import { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // ✅ FIX: Added useNavigate
 import { useAuth } from '@/context/AuthContext';
 import { User, LogOut, Settings, Calendar, FileText, CreditCard } from 'lucide-react';
 
@@ -8,6 +7,7 @@ const UserDropdown = () => {
   const { user, logout, checkRole } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate(); // ✅ FIX: Added useNavigate to handle navigation
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -26,9 +26,11 @@ const UserDropdown = () => {
   const handleLogout = () => {
     logout();
     setIsOpen(false);
+    navigate("/"); // ✅ FIX: Redirect user to homepage after logout
   };
 
   const getDashboardLink = () => {
+    console.log("User role:", user?.role); 
     if (checkRole(['admin'])) {
       return '/admin/dashboard';
     } else if (checkRole(['guide'])) {
@@ -37,7 +39,7 @@ const UserDropdown = () => {
       return '/hiker/dashboard';
     }
   };
-
+  
   return (
     <div className="relative" ref={dropdownRef}>
       <button

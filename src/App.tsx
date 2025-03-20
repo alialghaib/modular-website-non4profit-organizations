@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,8 +7,6 @@ import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { Elements } from "@stripe/react-stripe-js";
 import { stripePromise } from "@/lib/stripe";
-
-
 
 // Pages
 import Index from "./pages/Index";
@@ -32,11 +29,11 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <AuthProvider>
-        <Elements stripe={stripePromise}>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+      <BrowserRouter> 
+        <AuthProvider>
+          <Elements stripe={stripePromise}>
+            <Toaster />
+            <Sonner />
             <Routes>
               {/* Public routes */}
               <Route path="/" element={<Index />} />
@@ -82,9 +79,9 @@ const App = () => (
               {/* Catch-all route */}
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </BrowserRouter>
-        </Elements>
-      </AuthProvider>
+          </Elements>
+        </AuthProvider>
+      </BrowserRouter> 
     </TooltipProvider>
   </QueryClientProvider>
 );

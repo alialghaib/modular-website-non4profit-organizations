@@ -3,6 +3,7 @@ import { Calendar, Clock, MapPin, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Hike } from '@/lib/types';
 
+
 interface HikeCardProps {
   hike: Hike;
   variant?: 'default' | 'compact';

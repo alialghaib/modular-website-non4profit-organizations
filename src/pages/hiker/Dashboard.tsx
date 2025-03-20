@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Helmet } from "react-helmet";
 import Navigation from "@/components/Navigation";
@@ -12,37 +11,49 @@ import HikeCard from "@/components/HikeCard";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 
+// ✅ Define the correct Hike Type Interface
+interface Hike {
+  id: string;
+  name: string;
+  date: string;
+  time: string;
+  image: string;
+}
+
 const HikerDashboard = () => {
-  const { user } = useAuth();
+  const { user } = useAuth(); // ✅ Ensure `user` is available inside component
   const [activeTab, setActiveTab] = useState("hikes");
   const navigate = useNavigate();
 
-  // Fetch upcoming hikes
-  const { data: upcomingHikes, isLoading } = useQuery({
-    queryKey: ["upcomingHikes"],
-    queryFn: async () => {
-      // Get today's date at the beginning of the day
+  // ✅ Fixed: Use correct structure for fetching hikes
+  const { data: upcomingHikes, isLoading } = useQuery<Hike[], Error>({
+    queryKey: ["upcomingHikes", user?.id], 
+    queryFn: async (): Promise<Hike[]> => { 
+      if (!user) return [];
+
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const todayIso = today.toISOString().split('T')[0];
-      
-      console.log('Fetching upcoming hikes with date >= ' + todayIso);
-      
+      const todayIso = today.toISOString().split("T")[0];
+
+      console.log("Fetching booked hikes for user:", user.id, "with date >= ", todayIso);
+
       const { data, error } = await supabase
-        .from('hikes')
-        .select('*')
-        .gte('date', todayIso) // Use greater than or equal to include today's hikes
-        .order('date', { ascending: true })
-        .limit(3);
-      
+        .from("bookings")
+        .select("hikes: hike_id (id, name, date, time, image)") // ✅ Use proper aliasing
+        .eq("user_id", user.id)
+        .gte("hikes.date", todayIso)
+        .order("hikes.date", { ascending: true });
+
       if (error) {
-        console.error('Error fetching upcoming hikes:', error);
+        console.error("Error fetching upcoming booked hikes:", error);
         throw error;
       }
-      
-      console.log('Fetched upcoming hikes:', data);
-      return data || [];
-    }
+
+      console.log("Raw Supabase response:", JSON.stringify(data, null, 2));
+
+      // ✅ Ensure `hikes` exists and correctly flatten the array
+      return (data?.flatMap((booking) => booking.hikes as Hike[]) ?? []);
+    },
   });
 
   return (
@@ -106,125 +117,6 @@ const HikerDashboard = () => {
                     </div>
                   )}
                 </div>
-              </div>
-              
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                  <div className="px-6 pt-6">
-                    <TabsList className="grid w-full grid-cols-3">
-                      <TabsTrigger value="hikes">Completed Hikes</TabsTrigger>
-                      <TabsTrigger value="waivers">E-Waivers</TabsTrigger>
-                      <TabsTrigger value="payments">Payments</TabsTrigger>
-                    </TabsList>
-                  </div>
-                  
-                  <div className="p-6">
-                    <TabsContent value="hikes">
-                      <UserBookings />
-                    </TabsContent>
-                    
-                    <TabsContent value="waivers">
-                      <div className="space-y-6">
-                        <h2 className="text-2xl font-bold">E-Waivers</h2>
-                        
-                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-                          <p className="text-blue-800 dark:text-blue-300">
-                            All participants must complete an e-waiver before participating in a hike. 
-                            You can upload your signed waiver when booking a new hike.
-                          </p>
-                        </div>
-                        
-                        <div className="text-center py-10">
-                          <p className="text-gray-500 dark:text-gray-400">No active waivers found.</p>
-                          <button 
-                            onClick={() => navigate('/hikes')}
-                            className="mt-4 px-4 py-2 bg-primary text-white rounded-md"
-                          >
-                            Book a New Hike
-                          </button>
-                        </div>
-                      </div>
-                    </TabsContent>
-                    
-                    <TabsContent value="payments">
-                      <div className="space-y-6">
-                        <h2 className="text-2xl font-bold">Payment History</h2>
-                        
-                        <div className="overflow-x-auto">
-                          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                            <thead className="bg-gray-50 dark:bg-gray-800">
-                              <tr>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                  Date
-                                </th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                  Hike
-                                </th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                  Amount
-                                </th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                  Status
-                                </th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                  Receipt
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                              {/* Demo payment history */}
-                              <tr>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                  {new Date().toLocaleDateString()}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                  Morning Trail Hike
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                  $75.00
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400">
-                                    Paid
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                  <a href="#" className="text-primary hover:underline">View</a>
-                                </td>
-                              </tr>
-                              <tr>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                  {new Date(Date.now() - 7 * 86400000).toLocaleDateString()}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                  Mountain Summit Adventure
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                  $125.00
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400">
-                                    Paid
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                  <a href="#" className="text-primary hover:underline">View</a>
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                        
-                        <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-md border border-yellow-200 dark:border-yellow-800">
-                          <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-2">Demo Mode</h3>
-                          <p className="text-xs text-yellow-700 dark:text-yellow-300">
-                            This payment history is simulated. In a production environment, actual payment records from Stripe would be displayed.
-                          </p>
-                        </div>
-                      </div>
-                    </TabsContent>
-                  </div>
-                </Tabs>
               </div>
             </div>
           </div>
